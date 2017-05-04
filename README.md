@@ -30,7 +30,7 @@ Symfony Dependency Injection example...
         class: SoapClient
         arguments:
             - '%tesseract_wsdl%'
-
+            
     tesseract_php:
         class: BiffBangPow\TesseractPHP\TesseractPHP
         calls:
