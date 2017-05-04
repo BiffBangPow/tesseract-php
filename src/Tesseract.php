@@ -2,6 +2,7 @@
 
 namespace BiffBangPow\TesseractPHP;
 
+use BiffBangPow\TesseractPHP\Exception\TesseractAPIException;
 use BiffBangPow\TesseractPHP\Exception\UserAuthenticationException;
 
 class Tesseract
@@ -26,6 +27,12 @@ class Tesseract
         $this->soapClient = $soapClient;
     }
 
+    /**
+     * @param string $userID
+     * @param string $password
+     * @param string $dataSource
+     * @throws UserAuthenticationException
+     */
     public function authenticateUser(string $userID, string $password, string $dataSource)
     {
         $success = false;
@@ -37,10 +44,33 @@ class Tesseract
             'bSuccess' => &$success
         ]);
 
-        if ($success) {
-            $this->securityToken = $result;
-        } else {
+        if (!$success) {
             throw new UserAuthenticationException($result);
         }
+
+        $this->securityToken = $result;
+    }
+
+    /**
+     * @param string $callXML
+     * @return int - New Call Number
+     */
+    public function createCall(string $callXML): int
+    {
+        $success = false;
+        $callNum = 0;
+
+        $result = $this->soapClient->__soapCall("Create_Call", [
+            'sDataIn' => $callXML,
+            'sTokenID' => $this->securityToken,
+            'iNewCallNum' => &$callNum,
+            'bSuccess' => &$success
+        ]);
+
+        if (!$success) {
+            throw new TesseractAPIException($result);
+        }
+
+        return $callNum;
     }
 }
