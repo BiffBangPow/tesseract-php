@@ -96,18 +96,21 @@ class TesseractTest extends \PHPUnit_Framework_TestCase
 
     public function testCreateCall_UnSuccessfulRequest_ThrowsException()
     {
+        $errorMessage = "Error Message";
+
         $soapClient = $this->mockSoapClient();
         $soapClient->shouldReceive("__soapCall")
             ->with("Create_Call", $this->parametersWithReferencesToBeReturned([
                 'bSuccess' => false
             ]))
+            ->andReturn($errorMessage)
         ;
 
         $tesseract = new Tesseract($soapClient);
 
         $tesseract->authenticateUser("john", "password123", "data_source");
 
-        $this->setExpectedException(TesseractAPIException::class);
+        $this->setExpectedException(TesseractAPIException::class, $errorMessage);
         $tesseract->createCall("<Call>xml...</Call>");
 
     }
@@ -131,8 +134,8 @@ class TesseractTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @param array $requiredValues
-     * @param array $requiredReferences
+     * @param array $requiredValues - an array of key value pairs where the key is the parameter that is required and the value is the value it is required to be
+     * @param array $requiredReferences - an array of reference parameters that must be provided so that values can be returned to them
      * @return m\Matcher\Closure
      */
     private function parametersWithRequired($requiredValues, $requiredReferences = [])
@@ -159,7 +162,7 @@ class TesseractTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * @param array $referencesToSet
+     * @param array $referencesToSet - an array of key value pairs where the key is the reference to be set and the value is the value that will be returned to it
      * @return m\Matcher\Closure
      */
     private function parametersWithReferencesToBeReturned(array $referencesToSet)
