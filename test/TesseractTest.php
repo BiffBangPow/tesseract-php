@@ -6,6 +6,7 @@ use BiffBangPow\TesseractPHP\Exception\TesseractAPIException;
 use BiffBangPow\TesseractPHP\Exception\UserAuthenticationException;
 use BiffBangPow\TesseractPHP\Tesseract;
 use Mockery as m;
+use Test\BiffBangPow\TesseractPHP\FluentStdClass as s;
 
 class TesseractTest extends \PHPUnit_Framework_TestCase
 {
@@ -53,7 +54,7 @@ class TesseractTest extends \PHPUnit_Framework_TestCase
         $soapClient = $this->mockSoapClient();
         $soapClient->shouldReceive("__soapCall")
             ->with("Create_Call", m::type('array'))
-            ->andReturn(FluentStdClass::create()
+            ->andReturn(s::create()
                 ->set('bSuccess', true)
                 ->set('iNewCallNum', 5));
 
@@ -80,14 +81,13 @@ class TesseractTest extends \PHPUnit_Framework_TestCase
         $soapClient = $this->mockSoapClient();
         $soapClient->shouldReceive("__soapCall")
             ->with("Create_Call", m::type('array'))
-            ->andReturn(FluentStdClass::create()
+            ->andReturn(s::create()
                 ->set('bSuccess', true)
                 ->set('iNewCallNum', $callNum))
         ;
 
         $tesseract = new Tesseract($soapClient);
 
-        $tesseract->authenticateUser("john", "password123", "data_source");
         $result = $tesseract->createCall("<Call>xml...</Call>");
 
         $this->assertSame($callNum, $result);
@@ -100,18 +100,78 @@ class TesseractTest extends \PHPUnit_Framework_TestCase
         $soapClient = $this->mockSoapClient();
         $soapClient->shouldReceive("__soapCall")
             ->with("Create_Call", m::type('array'))
-            ->andReturn(FluentStdClass::create()
+            ->andReturn(s::create()
                 ->set('bSuccess', false)
                 ->set('Create_CallResult', $errorMessage))
         ;
 
         $tesseract = new Tesseract($soapClient);
 
-        $tesseract->authenticateUser("john", "password123", "data_source");
-
         $this->setExpectedException(TesseractAPIException::class, $errorMessage);
         $tesseract->createCall("<Call>xml...</Call>");
 
+    }
+
+    public function testRetrieveCall_CallsSoapClient()
+    {
+        $callNum = 5;
+
+        $soapClient = $this->mockSoapClient();
+        $soapClient->shouldReceive("__soapCall")
+            ->with("Retrieve_Call", m::type('array'))
+            ->andReturn(s::create()
+                ->set('bSuccess', true)
+                ->set('Retrieve_CallResult', s::create()
+                    ->set('any', "<Call>xml...</Call>")));
+
+        $tesseract = new Tesseract($soapClient);
+
+        $tesseract->authenticateUser("john", "password123", "data_source");
+        $tesseract->retrieveCall($callNum);
+
+        $soapClient->shouldHaveReceived("__soapCall")
+            ->with("Retrieve_Call", $this->parametersWithRequired([
+                'iCallNum'  => $callNum,
+                'bGetExtendedData' => true
+            ], [
+                'bSuccess'
+            ]))
+            ->once();
+    }
+
+    public function testRetrieveCall_SuccessfulRequest_ReturnsCallXML()
+    {
+        $callXML = "<Call>xml...</Call>";
+
+        $soapClient = $this->mockSoapClient();
+        $soapClient->shouldReceive("__soapCall")
+            ->with("Retrieve_Call", m::type('array'))
+            ->andReturn(s::create()
+                ->set('bSuccess', true)
+                ->set('Retrieve_CallResult', s::create()
+                    ->set('any', $callXML)));
+
+        $tesseract = new Tesseract($soapClient);
+
+        $result = $tesseract->retrieveCall(5);
+
+        $this->assertSame($callXML, $result);
+    }
+
+    public function testRetrieveCall_UnSuccessfulRequest_ThrowsException()
+    {
+        $soapClient = $this->mockSoapClient();
+        $soapClient->shouldReceive("__soapCall")
+            ->with("Retrieve_Call", m::type('array'))
+            ->andReturn(s::create()
+                ->set('bSuccess', false)
+                ->set('Retrieve_CallResult', s::create()
+                    ->set('any', '<error xmlns="">Something went wrong...</error>')));
+
+        $tesseract = new Tesseract($soapClient);
+
+        $this->setExpectedException(TesseractAPIException::class);
+        $tesseract->retrieveCall(5);
     }
 
     /**
@@ -127,7 +187,7 @@ class TesseractTest extends \PHPUnit_Framework_TestCase
                 "AuthenticateUser",
                 m::type('array')
             )
-            ->andReturn(FluentStdClass::create()
+            ->andReturn(s::create()
                 ->set('bSuccess', $authenticateUser)
                 ->set('AuthenticateUserResult', self::SECURITY_TOKEN));
 
@@ -152,14 +212,12 @@ class TesseractTest extends \PHPUnit_Framework_TestCase
 
             foreach ($requiredValues as $name => $value) {
                 if(!array_key_exists($name, $parameters) || $parameters[$name] !== $value) {
-                    throw new \Exception("Parameter '$name' with the value '$value' was not included");
                     return false;
                 }
             }
 
             foreach ($requiredReferences as $name) {
                 if(!array_key_exists($name, $parameters)) {
-                    throw new \Exception("Parameter reference '$name' was not included");
                     return false;
                 }
             }

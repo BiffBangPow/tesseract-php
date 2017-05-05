@@ -69,4 +69,26 @@ class Tesseract
 
         return intval($result->iNewCallNum);
     }
+
+    /**
+     * @param int $callNum
+     * @return string - xml representation of call
+     * @throws TesseractAPIException
+     */
+    public function retrieveCall(int $callNum): string
+    {
+        $result = $this->soapClient->__soapCall("Retrieve_Call", [[
+            'iCallNum' => $callNum,
+            'bGetExtendedData' => true,
+            'sTokenID' => $this->securityToken,
+            'bSuccess' => false
+        ]]);
+
+        if (!$result->bSuccess) {
+            $resultXML = new \SimpleXMLElement($result->Retrieve_CallResult->any);
+            throw new TesseractAPIException($resultXML[0]);
+        }
+
+        return $result->Retrieve_CallResult->any;
+    }
 }
