@@ -35,20 +35,18 @@ class Tesseract
      */
     public function authenticateUser(string $userID, string $password, string $dataSource)
     {
-        $success = false;
-
-        $result = $this->soapClient->__soapCall("AuthenticateUser", [
+        $result = $this->soapClient->__soapCall("AuthenticateUser", [[
             'sUID' => $userID,
             'sPWD' => $password,
             'sDataSource' => $dataSource,
-            'bSuccess' => &$success
-        ]);
+            'bSuccess' => true
+        ]]);
 
-        if (!$success) {
-            throw new UserAuthenticationException($result);
+        if (!$result->bSuccess) {
+            throw new UserAuthenticationException($result->AuthenticateUserResult);
         }
 
-        $this->securityToken = $result;
+        $this->securityToken = $result->AuthenticateUserResult;
     }
 
     /**
@@ -57,20 +55,18 @@ class Tesseract
      */
     public function createCall(string $callXML): int
     {
-        $success = false;
-        $callNum = 0;
 
-        $result = $this->soapClient->__soapCall("Create_Call", [
+        $result = $this->soapClient->__soapCall("Create_Call", [[
             'sDataIn' => $callXML,
             'sTokenID' => $this->securityToken,
-            'iNewCallNum' => &$callNum,
-            'bSuccess' => &$success
-        ]);
+            'iNewCallNum' => 0,
+            'bSuccess' => false
+        ]]);
 
-        if (!$success) {
-            throw new TesseractAPIException($result);
+        if (!$result->bSuccess) {
+            throw new TesseractAPIException($result->Create_CallResult);
         }
 
-        return $callNum;
+        return intval($result->iNewCallNum);
     }
 }

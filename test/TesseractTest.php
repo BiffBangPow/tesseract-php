@@ -48,15 +48,14 @@ class TesseractTest extends \PHPUnit_Framework_TestCase
 
     public function testCreateCall_CallsSoapClient()
     {
-        $callXML = "<Call>xml...</Call>";
+        $callXML = "<Call><Call_Status>OPEN</Call_Status><Call_CalT_Code>C1</Call_CalT_Code><Call_Site_Num>10005</Call_Site_Num></Call>";
 
         $soapClient = $this->mockSoapClient();
         $soapClient->shouldReceive("__soapCall")
-            ->with("Create_Call", $this->parametersWithReferencesToBeReturned([
-                'iNewCallNum' => 5,
-                'bSuccess' => true
-            ]))
-        ;
+            ->with("Create_Call", m::type('array'))
+            ->andReturn(FluentStdClass::create()
+                ->set('bSuccess', true)
+                ->set('iNewCallNum', 5));
 
         $tesseract = new Tesseract($soapClient);
 
@@ -80,10 +79,10 @@ class TesseractTest extends \PHPUnit_Framework_TestCase
 
         $soapClient = $this->mockSoapClient();
         $soapClient->shouldReceive("__soapCall")
-            ->with("Create_Call", $this->parametersWithReferencesToBeReturned([
-                'iNewCallNum' => $callNum,
-                'bSuccess' => true
-            ]))
+            ->with("Create_Call", m::type('array'))
+            ->andReturn(FluentStdClass::create()
+                ->set('bSuccess', true)
+                ->set('iNewCallNum', $callNum))
         ;
 
         $tesseract = new Tesseract($soapClient);
@@ -100,10 +99,10 @@ class TesseractTest extends \PHPUnit_Framework_TestCase
 
         $soapClient = $this->mockSoapClient();
         $soapClient->shouldReceive("__soapCall")
-            ->with("Create_Call", $this->parametersWithReferencesToBeReturned([
-                'bSuccess' => false
-            ]))
-            ->andReturn($errorMessage)
+            ->with("Create_Call", m::type('array'))
+            ->andReturn(FluentStdClass::create()
+                ->set('bSuccess', false)
+                ->set('Create_CallResult', $errorMessage))
         ;
 
         $tesseract = new Tesseract($soapClient);
@@ -121,58 +120,48 @@ class TesseractTest extends \PHPUnit_Framework_TestCase
      */
     private function mockSoapClient(bool $authenticateUser = true)
     {
+
         $soapClient = m::mock(\SoapClient::class);
         $soapClient->shouldReceive('__soapCall')
             ->with(
                 "AuthenticateUser",
-                $this->parametersWithReferencesToBeReturned(['bSuccess' => $authenticateUser])
+                m::type('array')
             )
-            ->andReturn(self::SECURITY_TOKEN)
-        ;
+            ->andReturn(FluentStdClass::create()
+                ->set('bSuccess', $authenticateUser)
+                ->set('AuthenticateUserResult', self::SECURITY_TOKEN));
 
         return $soapClient;
     }
 
     /**
      * @param array $requiredValues - an array of key value pairs where the key is the parameter that is required and the value is the value it is required to be
-     * @param array $requiredReferences - an array of reference parameters that must be provided so that values can be returned to them
+     * @param array $requiredReferences - an array of reference parameters that must be provided. These need to be included but we don't care what they are
      * @return m\Matcher\Closure
      */
     private function parametersWithRequired($requiredValues, $requiredReferences = [])
     {
-        return m::on(function ($parameters) use ($requiredValues, $requiredReferences) {
-            if (!is_array($parameters)) {
-                throw new \Exception('$parameters is not an array');
+        return m::on(function ($data) use ($requiredValues, $requiredReferences) {
+
+            if (!is_array($data) || !is_array($data[0])) {
                 return false;
             }
+
+            //for some reason the parameters are always the first item of another array
+            $parameters = $data[0];
+
             foreach ($requiredValues as $name => $value) {
                 if(!array_key_exists($name, $parameters) || $parameters[$name] !== $value) {
                     throw new \Exception("Parameter '$name' with the value '$value' was not included");
                     return false;
                 }
             }
+
             foreach ($requiredReferences as $name) {
                 if(!array_key_exists($name, $parameters)) {
                     throw new \Exception("Parameter reference '$name' was not included");
                     return false;
                 }
-            }
-            return true;
-        });
-    }
-
-    /**
-     * @param array $referencesToSet - an array of key value pairs where the key is the reference to be set and the value is the value that will be returned to it
-     * @return m\Matcher\Closure
-     */
-    private function parametersWithReferencesToBeReturned(array $referencesToSet)
-    {
-        return m::on(function ($parameters) use ($referencesToSet) {
-            if (!is_array($parameters)) {
-                return false;
-            }
-            foreach ($referencesToSet as $reference => $value) {
-                $parameters[$reference] = $value;
             }
             return true;
         });
