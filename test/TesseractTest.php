@@ -115,6 +115,7 @@ class TesseractTest extends \PHPUnit_Framework_TestCase
     public function testRetrieveCall_CallsSoapClient()
     {
         $callNum = 5;
+        $getExtendedData = false;
 
         $soapClient = $this->mockSoapClient();
         $soapClient->shouldReceive("__soapCall")
@@ -127,12 +128,12 @@ class TesseractTest extends \PHPUnit_Framework_TestCase
         $tesseract = new Tesseract($soapClient);
 
         $tesseract->authenticateUser("john", "password123", "data_source");
-        $tesseract->retrieveCall($callNum);
+        $tesseract->retrieveCall($callNum, $getExtendedData);
 
         $soapClient->shouldHaveReceived("__soapCall")
             ->with("Retrieve_Call", $this->parametersWithRequired([
                 'iCallNum'  => $callNum,
-                'bGetExtendedData' => true
+                'bGetExtendedData' => $getExtendedData
             ], [
                 'bSuccess'
             ]))

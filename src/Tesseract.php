@@ -72,14 +72,15 @@ class Tesseract
 
     /**
      * @param int $callNum
+     * @param bool $getExtendedData - if true, will return extended data resolved from foreign keys
      * @return string - xml representation of call
      * @throws TesseractAPIException
      */
-    public function retrieveCall(int $callNum): string
+    public function retrieveCall(int $callNum, $getExtendedData = false): string
     {
         $result = $this->soapClient->__soapCall("Retrieve_Call", [[
             'iCallNum' => $callNum,
-            'bGetExtendedData' => true,
+            'bGetExtendedData' => $getExtendedData,
             'sTokenID' => $this->securityToken,
             'bSuccess' => false
         ]]);
