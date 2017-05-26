@@ -1,15 +1,12 @@
 <?php
 
-
-namespace Test\BiffBangPow\TesseractPHP;
-
+namespace BiffBangPow\TesseractPHP\Test\Helpers;
 
 class FluentStdClass extends \stdClass
 {
-
     /**
-     * @param $property
-     * @param $value
+     * @param mixed $property
+     * @param mixed $value
      * @return $this
      */
     public function set($property, $value)

@@ -1,24 +1,19 @@
 {
-  "name": "biffbangpow/tesseract-php",
-  "description": "Library for interacting with Tesseract API",
-  "license": "MIT",
-  "authors": [
-    {
-      "name": "William Arslett",
-      "email": "william.a@biffbangpow.com"
+    "name": "biffbangpow/tesseract-php",
+    "description": "Library for interacting with Tesseract API",
+    "version": "0.1.0",
+    "license": "MIT",
+    "require": {
+        "php": ">=7.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^6.1",
+        "mockery/mockery": "^0.9.9"
+    },
+    "autoload": {
+        "psr-4": {
+            "BiffBangPow\\TesseractPHP\\": "src/",
+            "BiffBangPow\\TesseractPHP\\Test\\": "test/"
+        }
     }
-  ],
-  "require": {
-    "php": ">=7.0"
-  },
-  "require-dev": {
-    "phpunit/phpunit": "4.6.*",
-    "mockery/mockery": "^0.9.4"
-  },
-  "autoload": {
-    "psr-4": {
-      "BiffBangPow\\TesseractPHP\\": "src/",
-      "Test\\BiffBangPow\\TesseractPHP\\": "test/"
-    }
-  }
 }
