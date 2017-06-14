@@ -10,6 +10,8 @@ use BiffBangPow\TesseractPHP\Test\Helpers\FluentStdClass as std;
 
 class TesseractPHPTest extends BaseTestCase
 {
+
+    const SECURITY_TOKEN = "t6y7u8i9o0p";
     const DATA_SOURCE = 'data_source';
     const PASSWORD = 'password123';
     const USER_ID = 'john';
@@ -188,6 +190,57 @@ class TesseractPHPTest extends BaseTestCase
         $tesseractPHP->retrieveCall(5);
     }
 
+    public function testCreateCallNote_CallsSoapClient()
+    {
+        $callXML = "<CallNote>"
+            . "<CallNote_Call_Num>97076</CallNote_Call_Num>"
+            . "<CallNote_Datetime>2010-08-02T10:02:22</CallNote_Datetime>"
+            . "<CallNote_Memo>Customer requested a callback</CallNote_Memo>"
+            . "<CallNote_NoteAction_Code>1NU</CallNote_NoteAction_Code>"
+            . "<Call_Next_NoteAction_Code>1NU</Call_Next_NoteAction_Code>"
+            . "<CallNote_Employ_Num>5-DMIS</CallNote_Employ_Num>"
+            . "</CallNote>";
+        $soapClient = $this->mockSoapClient();
+        $soapClient->shouldReceive("__soapCall")
+            ->with("Create_CallNote", m::type('array'))
+            ->andReturn(std::create()
+                ->set('bSuccess', true))
+        ;
+        $tesseractPHP = $this->createAuthenticatedTesseractPHP($soapClient);
+
+        $tesseractPHP->createCallNote($callXML);
+
+        $this->addToAssertionCount(1);
+        $soapClient->shouldHaveReceived("__soapCall")
+            ->with("Create_CallNote", $this->parametersWithRequired([
+                'sDataIn'  => $callXML,
+                'sTokenID' => self::SECURITY_TOKEN,
+            ], [
+                'bSuccess',
+            ]))
+            ->once()
+        ;
+    }
+
+    public function testCreateCallNote_UnSuccessfulRequest_ThrowsException()
+    {
+        $errorMessage = "Error Message";
+        $soapClient = $this->mockSoapClient();
+        $soapClient
+            ->shouldReceive("__soapCall")
+            ->with("Create_CallNote", m::type('array'))
+            ->andReturn(std::create()
+                ->set('bSuccess', false)
+                ->set('Create_CallNoteResult', $errorMessage))
+        ;
+
+        $tesseractPHP = $this->createAuthenticatedTesseractPHP($soapClient);
+
+        $this->expectException(TesseractAPIException::class);
+        $this->expectExceptionMessage($errorMessage);
+        $tesseractPHP->createCallNote("<CallNote>xml...</CallNote>");
+    }
+
     /**
      * @param array $requiredValues Array of key value pairs where the key is the parameter that is required
      *                              and the value is the value it is required to be.
@@ -230,5 +283,26 @@ class TesseractPHPTest extends BaseTestCase
         $tesseractPHP = new TesseractPHP($soapClient);
         $tesseractPHP->authenticateUser(self::USER_ID, self::PASSWORD, self::DATA_SOURCE);
         return $tesseractPHP;
+    }
+
+    /**
+     * @param bool $authenticateUser
+     * @return \SoapClient|m\Mock
+     */
+    protected function mockSoapClient(bool $authenticateUser = true)
+    {
+        /** @var \SoapClient|m\Mock $soapClient */
+        $soapClient = m::mock(\SoapClient::class);
+        $soapClient->shouldReceive('__soapCall')
+            ->with(
+                "AuthenticateUser",
+                m::type('array')
+            )
+            ->andReturn(std::create()
+                ->set('bSuccess', $authenticateUser)
+                ->set('AuthenticateUserResult', self::SECURITY_TOKEN))
+        ;
+
+        return $soapClient;
     }
 }

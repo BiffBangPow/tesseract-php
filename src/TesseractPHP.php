@@ -108,4 +108,23 @@ class TesseractPHP
 
         return $result->Retrieve_CallResult->any;
     }
+
+    /**
+     * @param string $callNoteXML
+     * @return void
+     * @throws TesseractAPIException
+     */
+    public function createCallNote(string $callNoteXML)
+    {
+
+        $result = $this->soapClient->__soapCall("Create_CallNote", [[
+            'sDataIn' => $callNoteXML,
+            'sTokenID' => $this->securityToken,
+            'bSuccess' => false
+        ]]);
+
+        if (!$result->bSuccess) {
+            throw new TesseractAPIException($result->Create_CallNoteResult);
+        }
+    }
 }
